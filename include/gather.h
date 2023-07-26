@@ -3,16 +3,7 @@
 
 #include <windows.h>
 #include <stdint.h>
-
-struct _s_time{
-    int16_t year;
-    int16_t month;
-    int16_t day;
-    int16_t hour;
-    int16_t minute;
-    int16_t second;
-};
-
+#include "structs.h"
 
 void gatherTime(){
     SYSTEMTIME st;
