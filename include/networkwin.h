@@ -8,98 +8,108 @@
 
 #include "structs.h"
 
+// -----------------------------------------------
 
-int initWSA(struct _sic_session_data*);
-struct _sic_session_data* createSocketTCPWin(struct _sic_session_data*);
-struct _sic_session_data* createSocketUDPWin(struct _sic_session_data*);
+int sicInitWSA(struct _sic_server_data*);
+int createSocketTCPWin(struct _sic_server_data*);
+//int createSocketUDPWin();
+int bindSocketWin(struct _sic_server_data*);
+int listenSocketWin(struct _sic_server_data*);
+int acceptSocketWin(struct _sic_server_data*, struct _sic_session_data*);
 
-int closeSocketWin(struct _sic_session_data*);
-void freeSessionData();
+int closeSocketWin(struct _sic_server_data*);
+void freeServerData(struct _sic_server_data*);
+void freeSessionData(struct _sic_session_data*);
 
-int destroyWSA(struct _sic_session_data*);
+int sicDestroyWSA();
 
-int initWSA(struct _sic_session_data* _session){
-    if(WSAStartup(MAKEWORD(2, 2), &(_session->wsa)) != 0){
+// -----------------------------------------------
+
+int sicInitWSA(struct _sic_server_data* _server){
+    if(WSAStartup(MAKEWORD(2, 2), &(_server->wsa)) != 0){
+        #ifdef _DEBUG_
+            printf("\tWSA init errorr\n");
+        #endif
+        sicDestroyWSA();
         return 1;
     }
     return 0;
 }
 
-int createSocketTCPWin(struct _sic_session_data* _session);
-
-/*
-
-struct _s_session_data* createSocket(){
-    struct _s_session_data* _session = malloc(sizeof(struct _s_session_data));
-    if(_session == NULL){
-        printf("Falied to allocate memory for _s_session_data");
-        return NULL;
+int createSocketTCPWin(struct _sic_server_data* _server){
+    _server->server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if(_server->server_socket == INVALID_SOCKET){
+        #ifdef _DEBUG_
+            printf("\t_server->server_socket creating error\n");
+        #endif
+        sicDestroyWSA();
+        return 1;
     }
+    return 0;
+}
 
-    if(WSAStartup(MAKEWORD(2, 2), &(_session->wsa)) != 0){
-        printf("Failed to initialize Winsock\n");
-        return NULL;
+int bindSocketWin(struct _sic_server_data* _server){
+    _server->server_addr.sin_family = AF_INET; 
+    _server->server_addr.sin_addr.s_addr = INADDR_ANY;
+    _server->server_addr.sin_port = htons(_server->port);
+
+    if(bind(_server->server_socket, (const struct sockaddr*)&(_server->server_addr), sizeof(_server->server_addr)) == SOCKET_ERROR){
+        #ifdef _DEBUG_
+            printf("\t_server->server_socket bind error\n");
+        #endif
+        sicDestroyWSA();
+        return 1;
     }
+    return 0;
+}
 
-    _session->server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if(_session->server_socket == INVALID_SOCKET){
-        printf("Failed to create socket\n");
-        return NULL;
+int listenSocketWin(struct _sic_server_data* _server){
+    if (listen(_server->server_socket, _server->conn_count) == SOCKET_ERROR) {
+        #ifdef _DEBUG_
+            printf("\t_server->server_socket listen error\n");
+        #endif
+        sicDestroyWSA();
+        return 1;
     }
+    return 0;
+}
 
-    _session->server_addr.sin_family = AF_INET;
-    _session->server_addr.sin_addr.s_addr = INADDR_ANY;
-    _session->server_addr.sin_port = htons(55555);
-
-    if(bind(_session->server_socket, (struct sockaddr*)&(_session->server_addr), sizeof(_session->server_addr)) == SOCKET_ERROR){
-        printf("Failed to bind socket\n");
-        return NULL;
-    }
-
-    if (listen(_session->server_socket, SOMAXCONN) == SOCKET_ERROR) {
-        printf("Failed to listen for incoming connections\n");
-        closesocket(_session->server_socket);
-        WSACleanup();
-        return NULL;
-    }
-
-    struct sockaddr_in client_addr;
-    int client_addr_len = sizeof(client_addr);
-    SOCKET client_socket;
-    int bytes_received;
-
+int acceptSocketWin(struct _sic_server_data* _server, struct _sic_session_data* _sessions){
     while (1) {
-        client_socket = accept(_session->server_socket, (struct sockaddr*)&client_addr, &client_addr_len);
-        if (client_socket == INVALID_SOCKET) {
-            printf("Failed to accept incoming connection\n");
+        unsigned int caddr_size = sizeof(_sessions->client_addr);
+        _sessions->client_socket = accept(_server->server_socket, (struct sockaddr*)&(_sessions->client_addr), &caddr_size);
+        if (_sessions->client_socket == INVALID_SOCKET) {
+            #ifdef _DEBUG_
+                printf("Failed to accept incoming connection\n");
+            #endif
             continue;
         }
 
-        printf("Client connected: %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+        printf("Client connected: %s:%d\n", inet_ntoa(_sessions->client_addr.sin_addr), ntohs(_sessions->client_addr.sin_port));
 
-        while ((bytes_received = recv(client_socket, _session->in_buffer, 1024, 0)) > 0) {
-            _session->in_buffer[bytes_received] = '\0';
-            printf("Received data from client: %s\n", _session->in_buffer);
+
+        while ((_sessions->bytes_received = recv(_sessions->client_socket, _sessions->in_buffer, 1024, 0)) > 0) {
+            _sessions->in_buffer[_sessions->bytes_received] = '\0';
+            printf("Received data from client: %s\n", _sessions->in_buffer);
 
         }
 
-        if (bytes_received == 0) {
+        if (_sessions->bytes_received == 0) {
             printf("Connection closed by the client\n");
         } else {
             printf("Failed to receive data from the client\n");
         }
 
-        closesocket(client_socket);
+        closesocket(_sessions->client_socket);
     }
-    return _session;
-}
-
-int closeSocket(struct _s_session_data* _session){
-    closesocket(_session->server_socket);
-    WSACleanup();
-    free(_session);
+    closesocket(_server->server_socket);
+    sicDestroyWSA();
     return 0;
 }
-*/
+
+int sicDestroyWSA(){
+    WSACleanup();
+    return 0;
+}
 
 #endif

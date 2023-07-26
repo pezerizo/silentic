@@ -9,13 +9,16 @@ struct _sic_server_data{
     struct sockaddr_in server_addr;
     SOCKET server_socket;
     WSADATA wsa;
+    char* address;
+    int16_t port;
+    int16_t conn_count;
     };
 
 struct _sic_session_data{
     struct sockaddr_in client_addr;
     SOCKET client_socket;
     int16_t bytes_received;
-    char in_buffer[MAXBUFFSIZE0];
+    char in_buffer[MAXBUFFSIZE];
 };
 
 struct _s_time{
