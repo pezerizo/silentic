@@ -10,5 +10,5 @@ set APP_NAME=silentic.exe
 mkdir %BUILD_DIRx64%
 mkdir %BUILD_DIRx32%
 
-gcc %MAIN_FILE% %INC_DIR% -o %BUILD_DIRx32%\%APP_NAME% -m32
-gcc %MAIN_FILE% %INC_DIR% -o %BUILD_DIRx64%\%APP_NAME% -m64
+gcc %MAIN_FILE% %INC_DIR% %LIB_DIR% -o %BUILD_DIRx32%\%APP_NAME% -m32 -lws2_32
+gcc %MAIN_FILE% %INC_DIR% %LIB_DIR% -o %BUILD_DIRx64%\%APP_NAME% -m64
