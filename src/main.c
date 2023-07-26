@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "..\include\gather.h"
-#include "..\include\network.h"
+#include "..\include\networkwin.h"
 #include "..\include\structs.h"
 
 int main(){

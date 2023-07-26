@@ -8,6 +8,27 @@
 
 #include "structs.h"
 
+
+int initWSA(struct _sic_session_data*);
+struct _sic_session_data* createSocketTCPWin(struct _sic_session_data*);
+struct _sic_session_data* createSocketUDPWin(struct _sic_session_data*);
+
+int closeSocketWin(struct _sic_session_data*);
+void freeSessionData();
+
+int destroyWSA(struct _sic_session_data*);
+
+int initWSA(struct _sic_session_data* _session){
+    if(WSAStartup(MAKEWORD(2, 2), &(_session->wsa)) != 0){
+        return 1;
+    }
+    return 0;
+}
+
+int createSocketTCPWin(struct _sic_session_data* _session);
+
+/*
+
 struct _s_session_data* createSocket(){
     struct _s_session_data* _session = malloc(sizeof(struct _s_session_data));
     if(_session == NULL){
@@ -79,5 +100,6 @@ int closeSocket(struct _s_session_data* _session){
     free(_session);
     return 0;
 }
+*/
 
 #endif
