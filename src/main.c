@@ -17,5 +17,9 @@ int main(){
     listenSocketWin(server);
     acceptSocketWin(server, client);
 
+    freeServerData(server);
+    freeSessionsData(client);
+    sicDestroyWSA();
+
     return 0;
 }

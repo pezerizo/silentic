@@ -19,6 +19,9 @@ struct _sic_session_data{
     SOCKET client_socket;
     int16_t bytes_received;
     char in_buffer[MAXBUFFSIZE];
+
+    struct _sic_session_data* prev;
+    struct _sic_session_data* next;
 };
 
 struct _s_time{
