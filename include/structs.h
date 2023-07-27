@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #define MAXBUFFSIZE 1024
+#define SESSIDSIZE 16
 
 struct _sic_server_data{
     struct sockaddr_in server_addr;
@@ -19,9 +20,11 @@ struct _sic_session_data{
     SOCKET client_socket;
     int16_t bytes_received;
     char in_buffer[MAXBUFFSIZE];
+    char id[SESSIDSIZE+1];
 
     struct _sic_session_data* prev;
     struct _sic_session_data* next;
+    struct _sic_session_data* start;
 };
 
 struct _s_time{
