@@ -13,19 +13,23 @@
 // -----------------------------------------------
 
 int sicInitWSA(struct _sic_server_data*);
+int sicDestroyWSA();
+
 int createSocketTCPWin(struct _sic_server_data*);
 //int createSocketUDPWin();
 int bindSocketWin(struct _sic_server_data*);
 int listenSocketWin(struct _sic_server_data*);
 int acceptSocketWin(struct _sic_server_data*, struct _sic_session_data*);
+int closeServerSocketWin(struct _sic_server_data*); // called in freeServerData()
+int closeSessionSocketWin(struct _sic_session_data*); // called in freeSessionData() and freeSessionsData()
 
-int closeServerSocketWin(struct _sic_server_data*);
-int closeSessionSocketWin(struct _sic_session_data*);
+struct _sic_session_data* createSession();
 void freeServerData(struct _sic_server_data*);
 struct _sic_session_data* freeSessionData(struct _sic_session_data*);
 int freeSessionsData(struct _sic_session_data*);
 
-int sicDestroyWSA();
+// Create threads for client/session
+// Destroy threads for client/session
 
 // -----------------------------------------------
 

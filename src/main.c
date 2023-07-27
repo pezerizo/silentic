@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "..\include\gather.h"
-#include "..\include\networkwin.h"
+#include "..\include\session_manager.h"
 #include "..\include\structs.h"
 
 int main(){
