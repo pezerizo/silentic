@@ -24,6 +24,7 @@ struct _sic_session_data{
 
     struct _sic_session_data* prev;
     struct _sic_session_data* next;
+    struct _sic_session_data* start;
 };
 
 struct _s_time{

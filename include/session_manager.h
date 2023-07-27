@@ -25,7 +25,9 @@ int acceptSocketWin(struct _sic_server_data*, struct _sic_session_data*);
 int closeServerSocketWin(struct _sic_server_data*); // called in freeServerData()
 int closeSessionSocketWin(struct _sic_session_data*); // called in freeSessionData() and freeSessionsData()
 
+struct _sic_session_data* searchEmptySession(struct _sic_server_data*, struct _sic_session_data*);
 struct _sic_session_data* createSession(struct _sic_server_data*, struct _sic_session_data*);
+struct _sic_session_data* initSessionStack(struct _sic_server_data*, struct _sic_session_data*);
 void freeServerData(struct _sic_server_data*);
 struct _sic_session_data* freeSessionData(struct _sic_session_data*);
 int freeSessionsData(struct _sic_session_data*);
@@ -90,30 +92,79 @@ int listenSocketWin(struct _sic_server_data* _server){
 
 
 int acceptSocketWin(struct _sic_server_data* _server, struct _sic_session_data* _session){
+        createSession(_server, _session);
 
-        _session = createSession(_server, _session);
-
-        printf("Client connected: %s:%d\n", inet_ntoa(_session->client_addr.sin_addr), ntohs(_session->client_addr.sin_port));
+        printf("Session established | connected: %s:%d -> server | session id %s\n", inet_ntoa(_session->client_addr.sin_addr), ntohs(_session->client_addr.sin_port), _session->id);
 
 
         while ((_session->bytes_received = recv(_session->client_socket, _session->in_buffer, 1024, 0)) > 0) {
             _session->in_buffer[_session->bytes_received] = '\0';
-            printf("Received data from client: %s\n", _session->in_buffer);
+            printf("Received data from session | session id: %s:\t%s\n", _session->id, _session->in_buffer);
         }
 
         if (_session->bytes_received == 0) {
-            printf("Connection closed by the client\n");
+            printf("Connection closed by the client | session id: %s\n", _session->id);
         } else {
-            printf("Failed to receive data from the client\n");
+            printf("Failed to receive data from the client | session id: %s\n", _session->id);
         }
 
     return 0;
 }
 
+struct _sic_session_data* initSessionStack(struct _sic_server_data* _server, struct _sic_session_data* _session){
+    struct _sic_session_data* _start;
+    struct _sic_session_data* temp;
+    for(size_t iter = 0; iter < _server->conn_count; ++iter){
+        _session = calloc(1, sizeof(struct _sic_session_data));
+        if(iter == 0){
+            _session->prev = NULL;
+            _session->next = NULL;
+            _session->start = _session;
+            _start = _session;
+            temp = _session;
+            _session = _session->next;
+        }else{
+            _session->prev = temp;
+            _session->next = NULL;
+            _session->prev->next = _session;
+            _session->start = _start;
+            temp = _session;
+            _session = _session->next;
+        }
+    }
+
+    _session = _start;
+    for(int iter = 0; iter < _server->conn_count; ++iter){
+        #ifdef _DEBUG_
+        printf("[%d] Session %p | start %p | next %p | prev %p\n", iter, _session, _session->start, _session->next, _session->prev);
+        #endif
+        _session = _session->next;
+    }
+    _session = _start;
+    return _session;
+}
+
+
+struct _sic_session_data* searchEmptySession(struct _sic_server_data* _server, struct _sic_session_data* _session){
+    struct _sic_session_data* _start;
+    _start = _session;
+    for(int iter = 0; iter < _server->conn_count; ++iter){
+        if(_session->client_socket == 0) return _session;
+        _session = _session->next;
+    }
+
+    #ifdef _DEBUG_
+        printf("Session stack is full\n");
+    #endif
+    return NULL;
+}
+
 
 struct _sic_session_data* createSession(struct _sic_server_data* _server, struct _sic_session_data* _session){
-    if(_session == NULL){
-        _session = calloc(1, sizeof(struct _sic_session_data));
+    _session = searchEmptySession(_server, _session);
+    if(_session == NULL) return NULL;
+
+    if(_session->client_socket == 0){
         unsigned int caddr_size = sizeof(_session->client_addr);
         _session->client_socket = accept(_server->server_socket, (struct sockaddr*)&(_session->client_addr), &caddr_size);
         if (_session->client_socket == INVALID_SOCKET) {
@@ -123,18 +174,11 @@ struct _sic_session_data* createSession(struct _sic_server_data* _server, struct
             return _session;
         }
         generateSessionID(_session);
-
-        printf("Session created with id: %s\n", _session->id);
-
-        return _session;
-        //if(_session->next == NULL && _session->prev == NULL) return NULL;
-        //else if(_session->next != NULL && _session->prev == NULL) return _session->next;
-        //else return _session->prev;
+        #ifdef _DEBUG_
+            printf("Session created with id: %s\n", _session->id);
+        #endif
     }
 
-    #ifdef _DEBUG_
-        printf("Session stack is full\n");
-    #endif
     return _session;
 }
 
