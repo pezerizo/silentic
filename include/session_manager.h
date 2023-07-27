@@ -146,8 +146,7 @@ struct _sic_session_data* initSessionStack(struct _sic_server_data* _server, str
 
 
 struct _sic_session_data* searchEmptySession(struct _sic_server_data* _server, struct _sic_session_data* _session){
-    struct _sic_session_data* _start;
-    _start = _session;
+    _session = _session->start;
     for(int iter = 0; iter < _server->conn_count; ++iter){
         if(_session->client_socket == 0) return _session;
         _session = _session->next;
