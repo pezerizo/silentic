@@ -21,7 +21,7 @@ int createSocketTCPWin(struct _sic_server_data*);
 //int createSocketUDPWin();
 int bindSocketWin(struct _sic_server_data*);
 int listenSocketWin(struct _sic_server_data*);
-int acceptSocketWin(struct _sic_server_data*, struct _sic_session_data*);
+struct _sic_session_data* acceptSocketWin(struct _sic_server_data*, struct _sic_session_data*);
 int closeServerSocketWin(struct _sic_server_data*); // called in freeServerData()
 int closeSessionSocketWin(struct _sic_session_data*); // called in freeSessionData() and freeSessionsData()
 
@@ -29,8 +29,8 @@ struct _sic_session_data* searchEmptySession(struct _sic_server_data*, struct _s
 struct _sic_session_data* createSession(struct _sic_server_data*, struct _sic_session_data*);
 struct _sic_session_data* initSessionStack(struct _sic_server_data*, struct _sic_session_data*);
 void freeServerData(struct _sic_server_data*);
-struct _sic_session_data* freeSessionData(struct _sic_session_data*);
-int freeSessionsData(struct _sic_session_data*);
+void freeSessionData(struct _sic_session_data*);
+void freeSessionsData(struct _sic_server_data*, struct _sic_session_data*);
 
 void generateSessionID(struct _sic_session_data*);
 // Create threads for client/session
@@ -91,9 +91,8 @@ int listenSocketWin(struct _sic_server_data* _server){
 }
 
 
-int acceptSocketWin(struct _sic_server_data* _server, struct _sic_session_data* _session){
-        createSession(_server, _session);
-
+struct _sic_session_data* acceptSocketWin(struct _sic_server_data* _server, struct _sic_session_data* _session){
+        _session = createSession(_server, _session);
         printf("Session established | connected: %s:%d -> server | session id %s\n", inet_ntoa(_session->client_addr.sin_addr), ntohs(_session->client_addr.sin_port), _session->id);
 
 
@@ -107,8 +106,7 @@ int acceptSocketWin(struct _sic_server_data* _server, struct _sic_session_data* 
         } else {
             printf("Failed to receive data from the client | session id: %s\n", _session->id);
         }
-
-    return 0;
+    return _session;
 }
 
 struct _sic_session_data* initSessionStack(struct _sic_server_data* _server, struct _sic_session_data* _session){
@@ -140,6 +138,7 @@ struct _sic_session_data* initSessionStack(struct _sic_server_data* _server, str
         #endif
         _session = _session->next;
     }
+    
     _session = _start;
     return _session;
 }
@@ -196,29 +195,41 @@ void generateSessionID(struct _sic_session_data* _session){
 
     // Convert the binary MD5 hash to a human-readable string format for the new ID
     for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-        snprintf(&(_session->id[i * 2]), 3, "%02x", (unsigned int)md5Output[i]);
+        snprintf(&(_session->id[i]), 3, "%02x", (unsigned int)md5Output[i]);
     }
 }
 
 
 int closeServerSocketWin(struct _sic_server_data* _server){
+    #ifdef _DEBUG_
+            printf("Closing server socket... ");
+    #endif
     if(closesocket(_server->server_socket) == SOCKET_ERROR){
         #ifdef _DEBUG_
             printf("Failed to close server socket\n");
         #endif
         return 1;
     }
+    #ifdef _DEBUG_
+            printf("Closed\n");
+    #endif
     return 0;
 }
 
 
 int closeSessionSocketWin(struct _sic_session_data* _session){
-        if(closesocket(_session->client_socket) == SOCKET_ERROR){
+    #ifdef _DEBUG_
+            printf("Closing session socket %s... ", _session->id);
+    #endif
+    if(closesocket(_session->client_socket) == SOCKET_ERROR){
         #ifdef _DEBUG_
             printf("Failed to close client socket\n");
         #endif
         return 1;
     }
+    #ifdef _DEBUG_
+            printf("Closed\n");
+    #endif
     return 0;
 }
 
@@ -229,7 +240,7 @@ void freeServerData(struct _sic_server_data* _server){
 }
 
 
-struct _sic_session_data* freeSessionData(struct _sic_session_data* _session){
+void freeSessionData(struct _sic_session_data* _session){
     struct _sic_session_data* temp;
     if(_session->next == NULL && _session->prev == NULL){
         closeSessionSocketWin(_session);
@@ -237,7 +248,6 @@ struct _sic_session_data* freeSessionData(struct _sic_session_data* _session){
         #ifdef _DEBUG_
             printf("Single session deleted\n");
         #endif
-        return NULL;
     }else if(_session->next != NULL && _session->prev != NULL){
         struct _sic_session_data* temp = _session->next;
         _session->prev->next = temp;
@@ -265,15 +275,22 @@ struct _sic_session_data* freeSessionData(struct _sic_session_data* _session){
         closeSessionSocketWin(_session);
         free(_session);
     }
-    return temp;
 }
 
-int freeSessionsData(struct _sic_session_data* _session){
-    struct _sic_session_data* temp = _session;
-    while(temp != NULL){
-        temp = freeSessionData(temp);
+void freeSessionsData(struct _sic_server_data* _server, struct _sic_session_data* _session){
+    struct _sic_session_data* temp;
+    _session = _session->start;
+    for(int iter = 0; iter < _server->conn_count; ++iter){
+        if(_session->client_socket != 0){
+            closeSessionSocketWin(_session);
+        }
+        #ifdef _DEBUG_
+            printf("Session free data %s\n", _session->id);
+        #endif
+        temp = _session->next;
+        free(_session);
+        _session = temp;
     }
-    return 0;
 }
 
 int sicDestroyWSA(){

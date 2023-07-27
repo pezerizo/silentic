@@ -19,8 +19,8 @@ int main(){
     acceptSocketWin(server, client);
 
 
+    freeSessionsData(server, client);
     freeServerData(server);
-    freeSessionsData(client);
     sicDestroyWSA();
 
     return 0;
