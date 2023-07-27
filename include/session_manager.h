@@ -6,9 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <winsock2.h>
+#include <string.h>
 #pragma comment(lib, "ws2_32.lib") // Link the Windows Sockets library
 
 #include "structs.h"
+#include "md5.h"
 
 // -----------------------------------------------
 
@@ -23,11 +25,12 @@ int acceptSocketWin(struct _sic_server_data*, struct _sic_session_data*);
 int closeServerSocketWin(struct _sic_server_data*); // called in freeServerData()
 int closeSessionSocketWin(struct _sic_session_data*); // called in freeSessionData() and freeSessionsData()
 
-struct _sic_session_data* createSession();
+struct _sic_session_data* createSession(struct _sic_server_data*, struct _sic_session_data*);
 void freeServerData(struct _sic_server_data*);
 struct _sic_session_data* freeSessionData(struct _sic_session_data*);
 int freeSessionsData(struct _sic_session_data*);
 
+void generateSessionID(struct _sic_session_data*);
 // Create threads for client/session
 // Destroy threads for client/session
 
@@ -86,31 +89,72 @@ int listenSocketWin(struct _sic_server_data* _server){
 }
 
 
-int acceptSocketWin(struct _sic_server_data* _server, struct _sic_session_data* _sessions){
-        unsigned int caddr_size = sizeof(_sessions->client_addr);
-        _sessions->client_socket = accept(_server->server_socket, (struct sockaddr*)&(_sessions->client_addr), &caddr_size);
-        if (_sessions->client_socket == INVALID_SOCKET) {
-            #ifdef _DEBUG_
-                printf("Failed to accept incoming connection\n");
-            #endif
-            return 1;
+int acceptSocketWin(struct _sic_server_data* _server, struct _sic_session_data* _session){
+
+        _session = createSession(_server, _session);
+
+        printf("Client connected: %s:%d\n", inet_ntoa(_session->client_addr.sin_addr), ntohs(_session->client_addr.sin_port));
+
+
+        while ((_session->bytes_received = recv(_session->client_socket, _session->in_buffer, 1024, 0)) > 0) {
+            _session->in_buffer[_session->bytes_received] = '\0';
+            printf("Received data from client: %s\n", _session->in_buffer);
         }
 
-        printf("Client connected: %s:%d\n", inet_ntoa(_sessions->client_addr.sin_addr), ntohs(_sessions->client_addr.sin_port));
-
-
-        while ((_sessions->bytes_received = recv(_sessions->client_socket, _sessions->in_buffer, 1024, 0)) > 0) {
-            _sessions->in_buffer[_sessions->bytes_received] = '\0';
-            printf("Received data from client: %s\n", _sessions->in_buffer);
-        }
-
-        if (_sessions->bytes_received == 0) {
+        if (_session->bytes_received == 0) {
             printf("Connection closed by the client\n");
         } else {
             printf("Failed to receive data from the client\n");
         }
 
     return 0;
+}
+
+
+struct _sic_session_data* createSession(struct _sic_server_data* _server, struct _sic_session_data* _session){
+    if(_session == NULL){
+        _session = calloc(1, sizeof(struct _sic_session_data));
+        unsigned int caddr_size = sizeof(_session->client_addr);
+        _session->client_socket = accept(_server->server_socket, (struct sockaddr*)&(_session->client_addr), &caddr_size);
+        if (_session->client_socket == INVALID_SOCKET) {
+            #ifdef _DEBUG_
+                printf("Failed to accept incoming connection\n");
+            #endif
+            return _session;
+        }
+        generateSessionID(_session);
+
+        printf("Session created with id: %s\n", _session->id);
+
+        return _session;
+        //if(_session->next == NULL && _session->prev == NULL) return NULL;
+        //else if(_session->next != NULL && _session->prev == NULL) return _session->next;
+        //else return _session->prev;
+    }
+
+    #ifdef _DEBUG_
+        printf("Session stack is full\n");
+    #endif
+    return _session;
+}
+
+void generateSessionID(struct _sic_session_data* _session){
+    // Concatenate the previous ID with the additional data
+    char combinedInput[33]; // Make sure it's large enough to hold both strings
+    if(_session->prev != NULL){
+       snprintf(combinedInput, sizeof(combinedInput), "%s", _session->prev->id); 
+    }else{
+       snprintf(combinedInput, sizeof(combinedInput), "%s", "empty");  
+    }
+
+    // Generate an MD5 hash of the combined input to get the new ID
+    char md5Output[MD5_DIGEST_LENGTH]; // 16 bytes for MD5 hash
+    generateMD5(combinedInput, sizeof(combinedInput), md5Output);
+
+    // Convert the binary MD5 hash to a human-readable string format for the new ID
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+        snprintf(&(_session->id[i * 2]), 3, "%02x", (unsigned int)md5Output[i]);
+    }
 }
 
 
@@ -181,10 +225,10 @@ struct _sic_session_data* freeSessionData(struct _sic_session_data* _session){
     return temp;
 }
 
-int freeSessionsData(struct _sic_session_data* _sessions){
-    struct _sic_session_data* temp;
+int freeSessionsData(struct _sic_session_data* _session){
+    struct _sic_session_data* temp = _session;
     while(temp != NULL){
-        temp = freeSessionData(_sessions);
+        temp = freeSessionData(temp);
     }
     return 0;
 }
