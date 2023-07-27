@@ -1,5 +1,5 @@
 set LIB_DIR=-LC:\MinGW\lib
-set INC_DIR=-IC:\MinGW\include -IC:\Users\vlado\Desktop\projects\openssl\include
+set INC_DIR=-IC:\MinGW\include
 
 set MAIN_FILE=.\src\main.c
 set BUILD_DIRx64=.\build\x64
