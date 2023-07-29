@@ -1,5 +1,5 @@
-#ifndef _S_MD5_
-#define _S_MD5_
+#ifndef _S_CRYPTO_
+#define _S_CRYPTO_
 
 #include <stdio.h>
 #include <stdint.h>

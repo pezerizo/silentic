@@ -10,10 +10,11 @@ struct _sic_server_data{
     struct sockaddr_in server_addr;
     SOCKET server_socket;
     WSADATA wsa;
-    char* address;
     int16_t port;
-    int16_t conn_count;
-    };
+    int16_t conn_allowed;
+    int16_t conn_established;
+    int16_t sess_items;
+};
 
 struct _sic_session_data{
     struct sockaddr_in client_addr;
@@ -24,19 +25,7 @@ struct _sic_session_data{
 
     struct _sic_session_data* prev;
     struct _sic_session_data* next;
-    struct _sic_session_data* start;
+    struct _sic_session_data* begin;
 };
-
-struct _s_time{
-    int16_t year;
-    int16_t month;
-    int16_t day;
-    int16_t hour;
-    int16_t minute;
-    int16_t second;
-    };
-
-
-
 
 #endif
