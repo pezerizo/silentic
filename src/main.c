@@ -8,12 +8,15 @@ int main(){
     struct _sic_session_data* client = NULL;
 
     server->port = 55555;
-    server->conn_allowed = 2;
+    server->conn_allowed = 4;
+    server->conn_established = 0;
     server->sess_items = 0;
 
-    initSession(server, client);
-    initSession(server, client);
-    initSession(server, client);
+    for(int i =0; i<server->conn_allowed+4; ++i){
+        if ((client = initSession(server, client)) == NULL){
+            printf("go wrong\n");
+        }
+    }
 
     sicInitWSA(server);
     createSocketTCPWin(server);
@@ -23,7 +26,7 @@ int main(){
 
 
     freeSessionList(server, client);
-    freeServerData(server);
+    freeServer(server);
     sicDestroyWSA();
 
     return 0;

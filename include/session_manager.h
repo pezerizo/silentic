@@ -25,14 +25,14 @@ struct _sic_session_data* acceptSocketWin(struct _sic_server_data*, struct _sic_
 int closeServerSocketWin(struct _sic_server_data*); // called in freeServerData()
 int closeSessionSocketWin(struct _sic_session_data*); // called in freeSessionData() and freeSessionsData()
 
-int initServer(struct _sic_server_data*);
+//int initServer(struct _sic_server_data*);
 int freeServer(struct _sic_server_data*);
 
-int initSession(struct _sic_server_data*, struct _sic_session_data*);
+struct _sic_session_data* initSession(struct _sic_server_data*, struct _sic_session_data*);
 struct _sic_session_data* searchEmptySession(struct _sic_server_data*, struct _sic_session_data*);
 struct _sic_session_data* establishSession(struct _sic_server_data*, struct _sic_session_data*);
 int breakSession(struct _sic_server_data*, struct _sic_session_data*);
-int freeSession(struct _sic_server_data*, struct _sic_session_data*);
+void freeSession(struct _sic_session_data* _session);
 void freeSessionList(struct _sic_server_data*, struct _sic_session_data*);
 
 
@@ -92,8 +92,6 @@ int listenSocketWin(struct _sic_server_data* _server){
     return 0;
 }
 struct _sic_session_data* acceptSocketWin(struct _sic_server_data* _server, struct _sic_session_data* _session){
-        printf("123");
-        printf("%p\n", _session);
         _session = establishSession(_server, _session);
         printf("Session established | connected: %s:%d -> server | session id %s\n", inet_ntoa(_session->client_addr.sin_addr), ntohs(_session->client_addr.sin_port), _session->id);
 
@@ -111,28 +109,7 @@ struct _sic_session_data* acceptSocketWin(struct _sic_server_data* _server, stru
 
     return _session;
 }
-int initSession(struct _sic_server_data* _server, struct _sic_session_data* _session){
-    /*struct _sic_session_data* _start;
-    struct _sic_session_data* temp;
-    for (size_t iter = 0; iter < _server->conn_allowed; ++iter){
-        _session = calloc(1, sizeof(struct _sic_session_data));
-        if (iter == 0){
-            _session->prev = NULL;
-            _session->next = NULL;
-            _session->begin = _session;
-            _start = _session;
-            temp = _session;
-            _session = _session->next;
-        }else{
-            _session->prev = temp;
-            _session->next = NULL;
-            _session->prev->next = _session;
-            _session->begin = _start;
-            temp = _session;
-            _session = _session->next;
-        }
-    }*/
-
+struct _sic_session_data* initSession(struct _sic_server_data* _server, struct _sic_session_data* _session){
     struct _sic_session_data* new_session;
     new_session = calloc(1, sizeof(struct _sic_session_data));
     if (_server->sess_items == 0){
@@ -152,23 +129,25 @@ int initSession(struct _sic_server_data* _server, struct _sic_session_data* _ses
         _session = new_session;
 
         _server->sess_items += 1;
-    }else{ return 1; }
+    }else{ return NULL; }
 
 
     #ifdef _DEBUG_
-    printf("%p\n", _session->begin);
     for (struct _sic_session_data* iter = _session->begin; iter != NULL; iter = iter->next){
         printf("Session %p | start %p | next %p | prev %p\n", iter, iter->begin, iter->next, iter->prev);
     }
+    printf("--------------\n");
     #endif
 
-    return 0;
+    _session = _session->begin;
+    return _session;
 }
 void freeSessionList(struct _sic_server_data* _server, struct _sic_session_data* _session){
-    struct _sic_session_data* temp = _session->begin;
+    struct _sic_session_data* temp;
+    struct _sic_session_data* iter = _session;
     while(iter != NULL){
        if (iter->client_socket != 0){
-            breakSession(iter);
+            breakSession(_server, iter);
         }
         #ifdef _DEBUG_
             printf("Session free data %s\n", iter->id);
@@ -193,6 +172,7 @@ struct _sic_session_data* establishSession(struct _sic_server_data* _server, str
     if (_session == NULL) return NULL;
     if (_session->client_socket != 0) return NULL;
 
+
     if (_session->client_socket == 0 && _server->conn_established <= _server->conn_allowed && _server->sess_items <= _server->conn_allowed){
         unsigned int caddr_size = sizeof(_session->client_addr);
         _session->client_socket = accept(_server->server_socket, (struct sockaddr*)&(_session->client_addr), &caddr_size);
@@ -213,7 +193,7 @@ struct _sic_session_data* establishSession(struct _sic_server_data* _server, str
 }
 int breakSession(struct _sic_server_data* _server, struct _sic_session_data* _session){
     if (_session == NULL) return 1;
-    if (_session->client_socket != 0) return 1;
+    if (_session->client_socket == 0) return 1;
 
     if (closeSessionSocketWin(_session) == 0){
         _server->conn_established--;
