@@ -11,8 +11,9 @@ int main(){
     server->conn_allowed = 2;
     server->sess_items = 0;
 
-    client = initSession(server, client);
-    printf("%p\n", client);
+    initSession(server, client);
+    initSession(server, client);
+    initSession(server, client);
 
     sicInitWSA(server);
     createSocketTCPWin(server);
