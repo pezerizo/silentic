@@ -12,16 +12,12 @@ int main(){
     server->conn_established = 0;
     server->sess_items = 0;
 
-    for(int i =0; i<server->conn_allowed+4; ++i){
-        if ((client = initSession(server, client)) == NULL){
-            printf("go wrong\n");
-        }
-    }
 
     sicInitWSA(server);
     createSocketTCPWin(server);
     bindSocketWin(server);
     listenSocketWin(server);
+    //client = initSession(server, client);
     acceptSocketWin(server, client);
 
 
