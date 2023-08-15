@@ -57,6 +57,7 @@ void* start(void* _sess){
     } else {
         printf("Failed to receive data from the client | session id: %s\n", _session->id);
     }
+    //_session->all_thread_count -= 1;
 }
 
 int sicInitWSA(struct _sic_server_data* _server){
@@ -113,11 +114,11 @@ int listenSocketWin(struct _sic_server_data* _server){
 }
 
 struct _sic_session_data* acceptSocketWin(struct _sic_server_data* _server, struct _sic_session_data* _session){
-    if (_session == NULL ) _session = initSession(_server, _session);
     while(1){
         _session = establishSession(_server, _session);
         printf("Session established | connected: %s:%d -> server | session id %s\n", inet_ntoa(_session->client_addr.sin_addr), ntohs(_session->client_addr.sin_port), _session->id);
 
+        //_session->all_thread_count += 1;
         pthread_create(&(_session->session_thread), NULL, start, _session);
     }
 
@@ -134,6 +135,7 @@ struct _sic_session_data* initSession(struct _sic_server_data* _server, struct _
         new_session->next = NULL;
         new_session->begin = new_session;
         _session = new_session;
+        _session->all_thread_count = 0;
 
         _server->sess_items += 1;
     }
@@ -143,6 +145,7 @@ struct _sic_session_data* initSession(struct _sic_server_data* _server, struct _
         new_session->next = NULL;
         new_session->begin = _session->begin;
         _session->next = new_session;
+        new_session->all_thread_count = _session->all_thread_count;
         _session = new_session;
 
         _server->sess_items += 1;
@@ -195,7 +198,7 @@ struct _sic_session_data* searchEmptySession(struct _sic_server_data* _server, s
 
 struct _sic_session_data* establishSession(struct _sic_server_data* _server, struct _sic_session_data* _session){
     struct _sic_session_data* temp = _session;
-    if ((_session = searchEmptySession(_server, _session)) == NULL) _session = initSession(_server, temp);
+    if ((_session = searchEmptySession(_server, _session)) == NULL) return NULL;
 
     if (_session->client_socket == 0 && _server->conn_established <= _server->conn_allowed && _server->sess_items <= _server->conn_allowed){
         unsigned int caddr_size = sizeof(_session->client_addr);
