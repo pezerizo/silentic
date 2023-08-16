@@ -11,8 +11,21 @@
 #define MAXSESSCOUNT 255
 #define SESSPOLL MAXSESSCOUNT
 
+typedef struct Session{
+    SOCKET session_socket;
+    SOCKET client_socket;
+
+    struct sockaddr_in session_addr;
+    struct sockaddr_in client_addr;
+
+    uint16_t port;
+    uint16_t id;
+    uint8_t *buffer;
+} SILENTSESSION, *PSILENTSESSION;
+
+
 typedef struct Server{
-    ifdef __x86_64__
+    #ifdef __x86_64__
         uint64_t *wsa;
     #elif __i386__
         uint32_t *wsa;
@@ -32,30 +45,13 @@ typedef struct Server{
 
 } SILENTSERVER, *PSILENTSERVER;
 
-
-typedef struct Session{
-    SOCKET session_socket;
-    SOCKET client_socket;
-
-    struct sockaddr_in session_addr;
-    struct sockaddr_in client_addr;
-
-    uint16_t port;
-    uint16_t id;
-    uint8_t *buffer;
-} SILENTSESSION, *PSILENTSESSION;
-
 //----------------------------------------------------------------------
 extern int initWSA(PSILENTSERVER server);
 
-extern PSILENTSESSION initServer();
-extern PSILENTSESSION initSession(PSILENTSERVER server, uint16_t port = 55550, unsigned long from_ip = INADDR_ANY);
+extern PSILENTSERVER initServer();
+extern PSILENTSESSION initSession(PSILENTSERVER server, uint16_t port, uint16_t buffer_size);
 
-extern PSILENTSESSION establishSession(PSILENTSERVER server, PSILENTSESSION session);
-extern void openSession();
-extern void manageSession();
-extern void closeSession();
-
+extern void startServer();
 //----------------------------------------------------------------------
 
 #endif
