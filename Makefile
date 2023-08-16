@@ -1,5 +1,4 @@
-OBJ = main.o crypto_manager.o gather_manager.o session_manager.o \
-	  structs_manager.o
+OBJ = main.o SessionManager.o
 
 EXEWIN = silentic.exe
 MAIN = src\main.c
@@ -8,7 +7,7 @@ MINGW = C:\MinGW
 
 LIBSDWIN = -L$(MINGW)\lib
 INCSDWIN = -I$(MINGW)\include
-LIBSWIN = -lws2_32 -lpthread
+LIBSWIN = -lws2_32
 
 BINx32WIN = .\build\x32
 BINx64WIN = .\build\x64
@@ -20,6 +19,5 @@ silentic.exe : $(objects)
 	gcc $(MAIN) $(INCSDWIN) $(LIBSDWIN) -o $(BINx32WIN)\$(EXEWIN) -m32 $(LIBSWIN)
 	gcc $(MAIN) $(INCSDWIN) $(LIBSDWIN) -o $(BINx32WIN)\$(EXEWIN) -m64 $(LIBSWIN)
 
-
-session_manager.o : structs_manager.o crypto_manager.o
-	gcc -c session_manager.h
+SessionManager.o : SessionManager.h SessionManager.c
+	gcc -c SessionManager.c -o SessionManager.o
