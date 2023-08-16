@@ -2,6 +2,7 @@
 #define _S_STRUCTS_
 
 #include <stdint.h>
+#include <pthread.h>
 
 #define MAXBUFFSIZE 1024
 #define SESSIDSIZE 16
@@ -21,7 +22,11 @@ struct _sic_session_data{
     SOCKET client_socket;
     int16_t bytes_received;
     char in_buffer[MAXBUFFSIZE];
+    
     char id[SESSIDSIZE+1];
+
+    pthread_t session_thread;
+    int16_t all_thread_count;
 
     struct _sic_session_data* prev;
     struct _sic_session_data* next;
