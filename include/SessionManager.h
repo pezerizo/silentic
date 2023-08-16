@@ -8,8 +8,8 @@
 #include <string.h>
 #include <winsock2.h>
 
-#define SESSSTACK 255
-#define SESSPOLL SESSSTACK
+#define MAXSESSCOUNT 255
+#define SESSPOLL MAXSESSCOUNT
 
 typedef struct Server{
     ifdef __x86_64__
@@ -19,8 +19,15 @@ typedef struct Server{
     #else
         unsigned int *wsa;
     #endif
-
-    PSILENTSESSION session_stack[SESSSTACK];
+    
+    #if MAXSESSCOUNT <= 256
+        uint8_t session_in_container;
+        uint8_t session_in_poll;
+    #elif MAXSESSCOUNT > 256
+        uint16_t session_in_container;
+        uint16_t session_in_poll;
+    #endif
+    PSILENTSESSION session_container[MAXSESSCOUNT];
     WSAPOLLFD session_poll[SESSPOLL];
 
 } SILENTSERVER, *PSILENTSERVER;
@@ -39,12 +46,10 @@ typedef struct Session{
 } SILENTSESSION, *PSILENTSESSION;
 
 //----------------------------------------------------------------------
+extern int initWSA(PSILENTSERVER server);
 
 extern PSILENTSESSION initServer();
-extern PSILENTSESSION initSession(PSILENTSERVER server);
-
-extern int initWSA(PSILENTSERVER server);
-//extern void destroyWSA();
+extern PSILENTSESSION initSession(PSILENTSERVER server, uint16_t port = 55550, unsigned long from_ip = INADDR_ANY);
 
 extern PSILENTSESSION establishSession(PSILENTSERVER server, PSILENTSESSION session);
 extern void openSession();
