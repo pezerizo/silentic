@@ -18,9 +18,9 @@ windows: silentic.exe
 silentic.exe : $(objects)
 	gcc $(MAIN) $(INCSDWIN) $(LIBSDWIN) -o $(BINx32WIN)\$(EXEWIN) -m32 $(LIBSWIN)
 	gcc $(MAIN) $(INCSDWIN) $(LIBSDWIN) -o $(BINx32WIN)\$(EXEWIN) -m64 $(LIBSWIN)
-
 Server.o : 
 	gcc -c Server.c -o Server.o
+
 
 env:
 	mkdir build

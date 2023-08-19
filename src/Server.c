@@ -51,6 +51,36 @@ PSILENTSERVER initServer(uint16_t port, const char* ip) {
     return newServer;
 }
 
+DWORD WINAPI sessionThreadFunction(LPVOID session) {
+    printf("id of session: %d | buffer address %p\n", ((PSILENTSESSION)session)->id, ((PSILENTSESSION)session)->buffer);
+    WSANETWORKEVENTS netEvents;
+    DWORD result;
+    int _id = ((PSILENTSESSION)session)->id;
+    while (1)
+    {
+        result = WSAWaitForMultipleEvents(1, &(((PSILENTSESSION)session)->server->client_events[_id]), FALSE, WSA_INFINITE, FALSE);
+
+        if (result == WSA_WAIT_FAILED)
+        {
+            printf("error\n");
+            break;
+        }
+
+        if (result == WSA_WAIT_EVENT_0)
+        {
+            if (WSAEnumNetworkEvents(*(((PSILENTSESSION)session)->socket), ((PSILENTSESSION)session)->server->client_events[_id], &netEvents) == 0)
+            {
+                if (netEvents.lNetworkEvents & FD_READ)
+                {
+                    printf("Something went from %s:%d\n", inet_ntoa(((PSILENTSESSION)session)->addr->sin_addr), ((PSILENTSESSION)session)->addr->sin_port);
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+
 void startServer(PSILENTSERVER server){
     int struct_size = sizeof(struct sockaddr);
     size_t miss = 0;
@@ -70,12 +100,32 @@ void startServer(PSILENTSERVER server){
                     printf(">> session buffer allocation error\n");
                 }
                 printf(">> connection established with client %s:%d\n", inet_ntoa(server->client_addrs[iter].sin_addr), server->client_addrs[iter].sin_port);
+
+                PSILENTSESSION session = (PSILENTSESSION)calloc(1, sizeof(SILENTSESSION));
+                session->server = server;
+                session->socket = &(server->client_sockets[iter]);
+                session->addr = &(server->client_addrs[iter]);
+                session->buffer = server->session_buffers[iter];
+                session->id = iter;
+
+
+                server->client_events[iter] = WSACreateEvent();
+                WSAEventSelect(server->client_sockets[iter], server->client_events[iter], FD_READ | FD_WRITE | FD_CLOSE | FD_CONNECT);
+
+                server->session_threads[iter] = CreateThread(
+                    NULL,               // Default security attributes
+                    0,                  // Default stack size
+                    sessionThreadFunction,     // Thread function
+                    (LPVOID)session,               // Thread function argument
+                    0,                  // Default creation flags
+                    NULL                // Pointer to thread identifier (optional)
+                );
+
                 server->client_socket_status[iter] = SOCKETBUSY;
             }
         }
     }
 }
-
 /*
 
     WSANETWORKEVENTS netEvents;
