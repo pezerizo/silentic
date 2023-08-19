@@ -1,4 +1,4 @@
-OBJ = main.o SessionManager.o
+OBJ = main.o Server.o
 
 EXEWIN = silentic.exe
 MAIN = src\main.c
@@ -19,5 +19,5 @@ silentic.exe : $(objects)
 	gcc $(MAIN) $(INCSDWIN) $(LIBSDWIN) -o $(BINx32WIN)\$(EXEWIN) -m32 $(LIBSWIN)
 	gcc $(MAIN) $(INCSDWIN) $(LIBSDWIN) -o $(BINx32WIN)\$(EXEWIN) -m64 $(LIBSWIN)
 
-SessionManager.o : SessionManager.h SessionManager.c
-	gcc -c SessionManager.c -o SessionManager.o
+Server.o : 
+	gcc -c Server.c -o Server.o

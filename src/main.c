@@ -1,13 +1,8 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <winsock2.h>
-#include "SessionManager.c"
+#include "Server.c"
 
 int main(){
-    PSILENTSERVER silentic = initServer();
-    initWSA(silentic);
-    initSession(silentic, 55550, 8192);
-
-
+    PSILENTSERVER server = initServer(55555, "127.0.0.1");
+    startServer(server);
     return 0;
 }
