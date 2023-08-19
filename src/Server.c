@@ -52,27 +52,31 @@ PSILENTSERVER initServer(uint16_t port, const char* ip) {
 }
 
 DWORD WINAPI sessionThreadFunction(LPVOID session) {
-    printf("id of session: %d | buffer address %p\n", ((PSILENTSESSION)session)->id, ((PSILENTSESSION)session)->buffer);
+
     WSANETWORKEVENTS netEvents;
     DWORD result;
     int _id = ((PSILENTSESSION)session)->id;
-    while (1)
-    {
+    while (1) {
         result = WSAWaitForMultipleEvents(1, &(((PSILENTSESSION)session)->server->client_events[_id]), FALSE, WSA_INFINITE, FALSE);
 
-        if (result == WSA_WAIT_FAILED)
-        {
+        if (result == WSA_WAIT_FAILED) {
             printf("error\n");
             break;
         }
 
-        if (result == WSA_WAIT_EVENT_0)
-        {
-            if (WSAEnumNetworkEvents(*(((PSILENTSESSION)session)->socket), ((PSILENTSESSION)session)->server->client_events[_id], &netEvents) == 0)
-            {
-                if (netEvents.lNetworkEvents & FD_READ)
-                {
-                    printf("Something went from %s:%d\n", inet_ntoa(((PSILENTSESSION)session)->addr->sin_addr), ((PSILENTSESSION)session)->addr->sin_port);
+        if (result == WSA_WAIT_EVENT_0) {
+
+            if (WSAEnumNetworkEvents(*(((PSILENTSESSION)session)->socket), ((PSILENTSESSION)session)->server->client_events[_id], &netEvents) == 0) {
+
+                if (netEvents.lNetworkEvents & FD_READ) {
+                    
+                    printf("[debug | %s:%d]>> something went from client\n", inet_ntoa(((PSILENTSESSION)session)->addr->sin_addr), ((PSILENTSESSION)session)->addr->sin_port);
+
+                } else if (netEvents.lNetworkEvents & FD_CLOSE) {
+
+                    printf("[debug | %s:%d]>> connection closed by client\n", inet_ntoa(((PSILENTSESSION)session)->addr->sin_addr), ((PSILENTSESSION)session)->addr->sin_port);
+                    freeSession((PSILENTSESSION)session);
+                    return 0;
                 }
             }
         }
@@ -85,21 +89,25 @@ void startServer(PSILENTSERVER server){
     int struct_size = sizeof(struct sockaddr);
     size_t miss = 0;
 
-    while (1) {
-        for (size_t iter = 0; iter < MAXCONN; ++iter){
+    do {
+
+        for (size_t iter = 0; iter < MAXCONN; ++iter) {
+
             if (server->client_socket_status[iter] == SOCKETFREE) {
-                printf(">> socket id: %d\n", iter);
+
                 server->client_sockets[iter] = accept(server->server_socket, (struct sockaddr*)&(server->client_addrs[iter]) , &struct_size);
+
                 if (server->client_sockets[iter] == -1) {
-                    printf(">> accepting error socket id: %d\n", iter);
+                    printf("[error]>> accepting error socket id: %d\n", iter);
                     continue;
                 }
-                if((server->session_buffers[iter] = (uint8_t*)calloc(1, SESSBUFFSIZE)) == server->session_buffers[iter]) {
-                    printf(">> session buffer allocated with %d bytes\n", SESSBUFFSIZE);
-                }else{
-                    printf(">> session buffer allocation error\n");
+                if ((server->session_buffers[iter] = (uint8_t*)calloc(1, SESSBUFFSIZE)) == server->session_buffers[iter]) {
+                    printf("[debug]>> buffer for session allocated with %d bytes\n", SESSBUFFSIZE);
+                } else {
+                    printf("[error]>> session buffer allocation error\n");
                 }
-                printf(">> connection established with client %s:%d\n", inet_ntoa(server->client_addrs[iter].sin_addr), server->client_addrs[iter].sin_port);
+
+                printf("[debug]>> connection established with client %s:%d\n", inet_ntoa(server->client_addrs[iter].sin_addr), server->client_addrs[iter].sin_port);
 
                 PSILENTSESSION session = (PSILENTSESSION)calloc(1, sizeof(SILENTSESSION));
                 session->server = server;
@@ -107,7 +115,6 @@ void startServer(PSILENTSERVER server){
                 session->addr = &(server->client_addrs[iter]);
                 session->buffer = server->session_buffers[iter];
                 session->id = iter;
-
 
                 server->client_events[iter] = WSACreateEvent();
                 WSAEventSelect(server->client_sockets[iter], server->client_events[iter], FD_READ | FD_WRITE | FD_CLOSE | FD_CONNECT);
@@ -122,7 +129,31 @@ void startServer(PSILENTSERVER server){
                 );
 
                 server->client_socket_status[iter] = SOCKETBUSY;
+                server->session_in_job++;
             }
         }
+    } while (server->session_in_job != 0);
+}
+
+
+void freeSession(PSILENTSESSION session){
+    const char* ip = inet_ntoa(session->addr->sin_addr);
+    uint16_t port = session->addr->sin_port;
+    if (shutdown(*(session->socket), SD_BOTH) == SOCKET_ERROR) {
+        printf("[error | %s:%d]>> Error shutting down socket\n", ip, port);
     }
+    if (closesocket(*(session->socket)) == SOCKET_ERROR) {
+        printf("[error | %s:%d]>> Error closing socket\n", ip, port);
+    }
+    free(session->buffer);
+    memset(session->addr, 0x0, sizeof(struct sockaddr_in));
+    if (!ResetEvent(session->server->client_events[session->id])) {
+        printf("[error | %s:%d]>> Error resetting event object\n", ip, port);
+    }
+    if (WSACloseEvent(session->server->client_events[session->id]) == FALSE) {
+        printf("[error | %s:%d]>> Error closing event object\n", ip, port);
+    }
+    session->server->client_socket_status[session->id] = 0;
+    (session->server->session_in_job)--;
+    printf("[debug | %s:%d]>> is free now\n", ip, port);
 }

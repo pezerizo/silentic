@@ -26,6 +26,8 @@ typedef struct Server{
     uint8_t client_socket_status[MAXCONN];
     uint8_t *session_buffers[MAXCONN];
 
+    uint16_t session_in_job;
+
 } SILENTSERVER, *PSILENTSERVER;
 
 typedef struct SessionID{
@@ -41,5 +43,7 @@ typedef struct SessionID{
 
 PSILENTSERVER initServer(uint16_t port, const char* ip);
 void startServer(PSILENTSERVER server);
+DWORD WINAPI sessionThreadFunction(LPVOID session);
+void freeSession(PSILENTSESSION session);
 
 #endif
