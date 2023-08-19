@@ -21,3 +21,12 @@ silentic.exe : $(objects)
 
 Server.o : 
 	gcc -c Server.c -o Server.o
+
+env:
+	mkdir build
+	mkdir build\x32
+	mkdir build\x64
+
+clean:
+	rm -r build
+	rm .\*.o
