@@ -126,29 +126,3 @@ void startServer(PSILENTSERVER server){
         }
     }
 }
-/*
-
-    WSANETWORKEVENTS netEvents;
-    while (1)
-    {
-        DWORD result = WSAWaitForMultipleEvents(1, &(server->event_obj), FALSE, WSA_INFINITE, FALSE);
-
-        if (result == WSA_WAIT_FAILED)
-        {
-            printf("error\n");
-            break;
-        }
-
-        if (result == WSA_WAIT_EVENT_0)
-        {
-            if (WSAEnumNetworkEvents(server->server_socket, server->event_obj, &netEvents) == 0)
-            {
-                if (netEvents.lNetworkEvents & FD_ACCEPT)
-                {
-                    printf("Socket event: FD_ACCEPT\n");
-                }
-            }
-        }
-    }
-}
-*/
