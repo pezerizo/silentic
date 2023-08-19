@@ -5,23 +5,25 @@
 #include <winsock2.h>
 #include <windows.h>
 
-#include "SessionModule.h"
-#include "DBModule.h"
-#include "UIModule.h"
-#include "CommandModule.h"
-#include "ParserModule.h"
-
 #define MAXCONN 1
+#define SESSBUFFSIZE 4096
+
+#define SOCKETFREE 0
+#define SOCKETBUSY 1
+#define SOCKETPEND 2
 
 typedef struct Server{
 
     WSADATA wsa;
-    WSAEVENT event_obj;
-    SOCKET server_socket;
-    SOCKET client_socket;
 
+    SOCKET server_socket;
     struct sockaddr_in server_addr;
-    struct sockaddr_in client_addr;
+
+    WSAEVENT client_events;
+    SOCKET client_sockets[MAXCONN];
+    struct sockaddr_in client_addrs[MAXCONN];
+    uint8_t client_socket_status[MAXCONN];
+    uint8_t *session_buffers[MAXCONN];
 
 } SILENTSERVER, *PSILENTSERVER;
 
