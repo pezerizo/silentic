@@ -51,13 +51,14 @@ PSILENTSERVER initServer(uint16_t port, const char* ip) {
     return newServer;
 }
 
-DWORD WINAPI sessionThreadFunction(LPVOID session) {
+DWORD WINAPI sessionThreadFunction(LPVOID _session) {
 
     WSANETWORKEVENTS netEvents;
     DWORD result;
-    int _id = ((PSILENTSESSION)session)->id;
+    PSILENTSESSION session = (PSILENTSESSION)_session;
+    int _id = session->id;
     while (1) {
-        result = WSAWaitForMultipleEvents(1, &(((PSILENTSESSION)session)->server->client_events[_id]), FALSE, WSA_INFINITE, FALSE);
+        result = WSAWaitForMultipleEvents(1, &(session->server->client_events[_id]), FALSE, WSA_INFINITE, FALSE);
 
         if (result == WSA_WAIT_FAILED) {
             printf("error\n");
@@ -66,16 +67,24 @@ DWORD WINAPI sessionThreadFunction(LPVOID session) {
 
         if (result == WSA_WAIT_EVENT_0) {
 
-            if (WSAEnumNetworkEvents(*(((PSILENTSESSION)session)->socket), ((PSILENTSESSION)session)->server->client_events[_id], &netEvents) == 0) {
+            if (WSAEnumNetworkEvents(*(session->socket), session->server->client_events[_id], &netEvents) == 0) {
 
                 if (netEvents.lNetworkEvents & FD_READ) {
                     
-                    printf("[debug | %s:%d]>> something went from client\n", inet_ntoa(((PSILENTSESSION)session)->addr->sin_addr), ((PSILENTSESSION)session)->addr->sin_port);
+                    int bytesReceived = recv(*(session->socket), session->buffer, SESSBUFFSIZE-1, 0);
+                    session->buffer[bytesReceived] = '\0';
+                    if (bytesReceived == SOCKET_ERROR) {
+                        printf("[error | %s:%d]>> Error receiving data\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port);
+                    } else if (bytesReceived == 0) {
+                        printf("[error | %s:%d]>> Connection closed by the remote side\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port);
+                    } else {
+                        printf("\n[debug | %s:%d]>> message: %s\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port, session->buffer);
+                    }
 
                 } else if (netEvents.lNetworkEvents & FD_CLOSE) {
 
-                    printf("[debug | %s:%d]>> connection closed by client\n", inet_ntoa(((PSILENTSESSION)session)->addr->sin_addr), ((PSILENTSESSION)session)->addr->sin_port);
-                    freeSession((PSILENTSESSION)session);
+                    printf("[debug | %s:%d]>> connection closed by client\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port);
+                    freeSession(session);
                     return 0;
                 }
             }

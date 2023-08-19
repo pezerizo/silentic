@@ -24,7 +24,7 @@ typedef struct Server{
     SOCKET client_sockets[MAXCONN];
     struct sockaddr_in client_addrs[MAXCONN];
     uint8_t client_socket_status[MAXCONN];
-    uint8_t *session_buffers[MAXCONN];
+    char *session_buffers[MAXCONN];
 
     uint16_t session_in_job;
 
@@ -36,7 +36,7 @@ typedef struct SessionID{
     SOCKET *socket;
     struct sockaddr_in *addr;
     int id;
-    uint8_t *buffer;
+    char *buffer;
 
 } SILENTSESSION, *PSILENTSESSION;
 
