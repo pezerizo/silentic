@@ -78,7 +78,17 @@ DWORD WINAPI sessionThreadFunction(LPVOID _session) {
                     } else if (bytesReceived == 0) {
                         printf("[error | %s:%d]>> Connection closed by the remote side\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port);
                     } else {
-                        printf("\n[debug | %s:%d]>> message: %s\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port, session->buffer);
+                        SYSTEMTIME time;
+                        memcpy(&time, session->buffer, sizeof(SYSTEMTIME));
+                        printf("\n[debug | %s:%d]>> bytes: %d message: %s\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port, bytesReceived, session->buffer);
+                        printf("Current Date and Time:\n");
+                        printf("Year: %d\n", time.wYear);
+                        printf("Month: %02d\n", time.wMonth);
+                        printf("Day: %02d\n", time.wDay);
+                        printf("Hour: %02d\n", time.wHour);
+                        printf("Minute: %02d\n", time.wMinute);
+                        printf("Second: %02d\n", time.wSecond);
+                        printf("Milliseconds: %03d\n", time.wMilliseconds);
                     }
 
                 } else if (netEvents.lNetworkEvents & FD_CLOSE) {
