@@ -2,58 +2,58 @@
 
 PSILENTSERVER initServer(uint16_t port, const char* ip) {
 
-    PSILENTSERVER newServer = (PSILENTSERVER)calloc(1, sizeof(SILENTSERVER));
-    if (!newServer) {
+    PSILENTSERVER new_server = (PSILENTSERVER)calloc(1, sizeof(SILENTSERVER));
+    if (!new_server) {
         return NULL;
     }
 
-    if (memset(newServer, 0x0, sizeof(SILENTSERVER)) != newServer) {
-        free(newServer);
+    if (memset(new_server, 0x0, sizeof(SILENTSERVER)) != new_server) {
+        free(new_server);
         return NULL;
     }
 
-    if (WSAStartup(MAKEWORD(2, 2), &(newServer->wsa)) != 0) {
+    if (WSAStartup(MAKEWORD(2, 2), &(new_server->wsa)) != 0) {
         printf("WSA init error\n");
-        free(newServer);
+        free(new_server);
         return NULL;
     }
 
-    newServer->server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (newServer->server_socket == INVALID_SOCKET) {
+    new_server->server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (new_server->server_socket == INVALID_SOCKET) {
         printf("Socket creation failed\n");
         WSACleanup();
-        free(newServer);
+        free(new_server);
         return NULL;
     }
 
-    newServer->server_addr.sin_family = AF_INET;
-    newServer->server_addr.sin_addr.s_addr = INADDR_ANY;
-    newServer->server_addr.sin_port = htons(port);
+    new_server->server_addr.sin_family = AF_INET;
+    new_server->server_addr.sin_addr.s_addr = INADDR_ANY;
+    new_server->server_addr.sin_port = htons(port);
 
-    if (bind(newServer->server_socket, (struct sockaddr*)&(newServer->server_addr), sizeof(struct sockaddr)) == SOCKET_ERROR) {
+    if (bind(new_server->server_socket, (struct sockaddr*)&(new_server->server_addr), sizeof(struct sockaddr)) == SOCKET_ERROR) {
         printf("Binding failed\n");
-        closesocket(newServer->server_socket);
+        closesocket(new_server->server_socket);
         WSACleanup();
-        free(newServer);
+        free(new_server);
         return NULL;
     }
 
-    if (listen(newServer->server_socket, MAXCONN) == SOCKET_ERROR) {
+    if (listen(new_server->server_socket, MAXCONN) == SOCKET_ERROR) {
         printf("Listening failed\n");
-        closesocket(newServer->server_socket);
+        closesocket(new_server->server_socket);
         WSACleanup();
-        free(newServer);
+        free(new_server);
         return NULL;
     }
 
-    printf(">> server started %s:%d\n", inet_ntoa(newServer->server_addr.sin_addr), ntohs(newServer->server_addr.sin_port));
+    printf(">> server started %s:%d\n", inet_ntoa(new_server->server_addr.sin_addr), ntohs(new_server->server_addr.sin_port));
 
-    return newServer;
+    return new_server;
 }
 
 DWORD WINAPI sessionThreadFunction(LPVOID _session) {
 
-    WSANETWORKEVENTS netEvents;
+    WSANETWORKEVENTS net_events;
     DWORD result;
     PSILENTSESSION session = (PSILENTSESSION)_session;
     int _id = session->id;
@@ -67,21 +67,31 @@ DWORD WINAPI sessionThreadFunction(LPVOID _session) {
 
         if (result == WSA_WAIT_EVENT_0) {
 
-            if (WSAEnumNetworkEvents(*(session->socket), session->server->client_events[_id], &netEvents) == 0) {
+            if (WSAEnumNetworkEvents(*(session->socket), session->server->client_events[_id], &net_events) == 0) {
 
-                if (netEvents.lNetworkEvents & FD_READ) {
+                if (net_events.lNetworkEvents & FD_READ) {
                     
-                    int bytesReceived = recv(*(session->socket), session->buffer, SESSBUFFSIZE-1, 0);
-                    session->buffer[bytesReceived] = '\0';
-                    if (bytesReceived == SOCKET_ERROR) {
+                    int bytes_received = recv(*(session->socket), session->buffer, SESSBUFFSIZE-1, 0);
+                    session->buffer[bytes_received] = '\0';
+                    if (bytes_received == SOCKET_ERROR) {
                         printf("[error | %s:%d]>> Error receiving data\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port);
-                    } else if (bytesReceived == 0) {
+                    } else if (bytes_received == 0) {
                         printf("[error | %s:%d]>> Connection closed by the remote side\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port);
                     } else {
-                        printf("\n[debug | %s:%d]>> message: %s\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port, session->buffer);
+                        SYSTEMTIME time;
+                        memcpy(&time, session->buffer, sizeof(SYSTEMTIME));
+                        printf("\n[debug | %s:%d]>> bytes: %d message: %s\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port, bytes_received, session->buffer);
+                        printf("Current Date and Time:\n");
+                        printf("Year: %d\n", time.wYear);
+                        printf("Month: %02d\n", time.wMonth);
+                        printf("Day: %02d\n", time.wDay);
+                        printf("Hour: %02d\n", time.wHour);
+                        printf("Minute: %02d\n", time.wMinute);
+                        printf("Second: %02d\n", time.wSecond);
+                        printf("Milliseconds: %03d\n", time.wMilliseconds);
                     }
 
-                } else if (netEvents.lNetworkEvents & FD_CLOSE) {
+                } else if (net_events.lNetworkEvents & FD_CLOSE) {
 
                     printf("[debug | %s:%d]>> connection closed by client\n", inet_ntoa(session->addr->sin_addr), session->addr->sin_port);
                     freeSession(session);
