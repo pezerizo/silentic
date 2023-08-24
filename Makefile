@@ -1,7 +1,10 @@
 OBJ = main.o Server.o
+OBJCLIENT = Client.o
 
 EXEWIN = silentic.exe
+EXEWINCLIENT = silent_client.exe
 MAIN = src\main.c
+MAINCLIENT = src\Client.c
 
 MINGW = C:\MinGW
 
@@ -21,6 +24,10 @@ silentic.exe : $(objects)
 Server.o : 
 	gcc -c Server.c -o Server.o
 
+
+client:
+	gcc $(MAINCLIENT) $(INCSDWIN) $(LIBSDWIN) -o $(BINx32WIN)\$(EXEWINCLIENT) -m32 $(LIBSWIN)
+	gcc $(MAINCLIENT) $(INCSDWIN) $(LIBSDWIN) -o $(BINx32WIN)\$(EXEWINCLIENT) -m64 $(LIBSWIN)
 
 env:
 	mkdir build
